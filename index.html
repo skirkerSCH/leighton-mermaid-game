@@ -21,14 +21,20 @@
             height: 100%;
             max-width: 800px;
             margin: 0 auto;
-            background: linear-gradient(180deg, #0ea5e9 0%, #0369a1 100%); /* Ocean gradient */
+            /* Removed the background gradient from here */
             overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         canvas {
             display: block;
             width: 100%;
             height: 100%;
+        }
+        #gameCanvas {
+            background: linear-gradient(180deg, #0ea5e9 0%, #0369a1 100%); /* Ocean gradient moved to the canvas */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
         .control-btn {
             background: rgba(255, 255, 255, 0.2);
@@ -110,10 +116,15 @@
 
         <!-- UI OVERLAY -->
         <div id="ui-layer" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 pointer-events-none hidden">
-            <div class="text-2xl font-bold text-white drop-shadow-md bg-black/30 px-4 py-1 rounded-full border border-white/20">
-                ⚪ <span id="score-display">0</span>
+            <div class="flex gap-2">
+                <div class="text-xl md:text-2xl font-bold text-white drop-shadow-md bg-black/30 px-3 md:px-4 py-1 rounded-full border border-white/20">
+                    Lv.<span id="level-display">1</span>
+                </div>
+                <div class="text-xl md:text-2xl font-bold text-white drop-shadow-md bg-black/30 px-3 md:px-4 py-1 rounded-full border border-white/20">
+                    ⚪ <span id="score-display">0</span>
+                </div>
             </div>
-            <div id="lives-display" class="text-2xl drop-shadow-md">
+            <div id="lives-display" class="text-xl md:text-2xl drop-shadow-md">
                 ❤️❤️❤️
             </div>
         </div>
@@ -154,10 +165,14 @@
         let previewCanvas, previewCtx;
         let animationId;
         
-        let gameState = 'menu'; // menu, playing, gameover, win
+        let gameState = 'menu'; // menu, playing, gameover, win, level_transition
         let score = 0;
         let lives = 3;
         let cameraX = 0;
+        
+        let currentLevel = 1;
+        const MAX_LEVELS = 3;
+        let levelEndX = 3200;
 
         // Customization
         let colors = {
@@ -356,10 +371,36 @@
                 ctx.arc(4, -13, 3, 0, Math.PI);
                 ctx.stroke();
 
-                // Hair (Front bang)
+                // Front Arm (Animated paddling or stretched forward)
+                ctx.fillStyle = colors.skin;
+                ctx.save();
+                ctx.translate(0, -2); // Shoulder joint
+                
+                let armAngle;
+                if (Math.abs(this.vx) > 0.5) {
+                    // Stretched out forward when moving horizontally
+                    armAngle = -1.2 + Math.sin(this.swimFrame * 2) * 0.2; 
+                } else {
+                    // Idle downward paddling when still
+                    armAngle = Math.sin(this.swimFrame * 1.5) * 0.5 + 0.3; 
+                }
+                
+                ctx.rotate(armAngle);
+                ctx.beginPath();
+                ctx.roundRect(-2, -2, 4, 14, 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Hair (Front bang fixed - moved up and away from face)
                 ctx.fillStyle = colors.hair;
                 ctx.beginPath();
-                ctx.arc(0, -20, 8, 0, Math.PI);
+                ctx.arc(-4, -23, 6, 0, Math.PI * 2); // Top volume
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(3, -24, 4, 0, Math.PI * 2); // Sweeping top
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(6, -20, 3, 0, Math.PI * 2); // Side sweep
                 ctx.fill();
 
                 ctx.restore();
@@ -443,17 +484,26 @@
         }
 
         class Enemy {
-            constructor(x, y, walkDistance) {
+            constructor(x, y, walkDistance, type = 'crab') {
+                this.type = type;
                 this.startX = x;
+                this.startY = y;
                 this.x = x;
                 this.y = y;
-                this.width = 24;
-                this.height = 16;
                 this.walkDistance = walkDistance;
-                this.speed = 1;
                 this.dir = 1;
                 this.isDead = false;
                 this.animTimer = 0;
+                
+                if (this.type === 'crab') {
+                    this.width = 24;
+                    this.height = 16;
+                    this.speed = 1;
+                } else if (this.type === 'seal') {
+                    this.width = 40;
+                    this.height = 20;
+                    this.speed = 1.5; // Seals swim a bit faster
+                }
             }
             update() {
                 if(this.isDead) return;
@@ -462,44 +512,96 @@
                 if (Math.abs(this.x - this.startX) > this.walkDistance) {
                     this.dir *= -1; // Turn around
                 }
+                
+                if (this.type === 'seal') {
+                    // Seals bob up and down gracefully while swimming
+                    this.y = this.startY + Math.sin(this.animTimer * 0.08) * 15;
+                }
+                
                 this.animTimer++;
             }
             draw(ctx) {
                 if(this.isDead) return;
 
-                // Draw a simple crab
                 ctx.save();
                 ctx.translate(this.x + this.width/2, this.y + this.height/2);
                 
-                ctx.fillStyle = '#ef4444'; // Red
-                // Body
-                ctx.beginPath();
-                ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI*2);
-                ctx.fill();
-                
-                // Eyes
-                ctx.fillStyle = 'white';
-                ctx.beginPath(); ctx.arc(-5, -8, 3, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(5, -8, 3, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = 'black';
-                ctx.beginPath(); ctx.arc(-5, -8, 1, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(5, -8, 1, 0, Math.PI*2); ctx.fill();
+                if (this.type === 'crab') {
+                    ctx.fillStyle = '#ef4444'; // Red
+                    // Body
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Eyes
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath(); ctx.arc(-5, -8, 3, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(5, -8, 3, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath(); ctx.arc(-5, -8, 1, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(5, -8, 1, 0, Math.PI*2); ctx.fill();
 
-                // Claws (animated)
-                ctx.fillStyle = '#dc2626';
-                let clawLift = Math.sin(this.animTimer * 0.2) * 3;
-                ctx.beginPath(); ctx.arc(-12, -4 + clawLift, 4, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(12, -4 - clawLift, 4, 0, Math.PI*2); ctx.fill();
-                
-                // Legs
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(-10, 5); ctx.lineTo(-14, 10 + clawLift/2);
-                ctx.moveTo(-5, 7); ctx.lineTo(-8, 12);
-                ctx.moveTo(10, 5); ctx.lineTo(14, 10 - clawLift/2);
-                ctx.moveTo(5, 7); ctx.lineTo(8, 12);
-                ctx.stroke();
+                    // Claws (animated)
+                    ctx.fillStyle = '#dc2626';
+                    let clawLift = Math.sin(this.animTimer * 0.2) * 3;
+                    ctx.beginPath(); ctx.arc(-12, -4 + clawLift, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(12, -4 - clawLift, 4, 0, Math.PI*2); ctx.fill();
+                    
+                    // Legs
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-10, 5); ctx.lineTo(-14, 10 + clawLift/2);
+                    ctx.moveTo(-5, 7); ctx.lineTo(-8, 12);
+                    ctx.moveTo(10, 5); ctx.lineTo(14, 10 - clawLift/2);
+                    ctx.moveTo(5, 7); ctx.lineTo(8, 12);
+                    ctx.stroke();
+                } else if (this.type === 'seal') {
+                    // Flip based on direction
+                    ctx.scale(this.dir, 1);
+                    
+                    // Body
+                    ctx.fillStyle = '#94a3b8'; // Slate gray
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Tail flipper (animated)
+                    let tailWobble = Math.sin(this.animTimer * 0.3) * 5;
+                    ctx.beginPath();
+                    ctx.moveTo(-15, 0);
+                    ctx.lineTo(-25, -6 + tailWobble);
+                    ctx.lineTo(-25, 6 + tailWobble);
+                    ctx.fill();
+
+                    // Front flipper (animated)
+                    ctx.fillStyle = '#64748b'; // Darker gray
+                    let flipAngle = Math.sin(this.animTimer * 0.2) * 0.3;
+                    ctx.save();
+                    ctx.translate(2, 4);
+                    ctx.rotate(flipAngle);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 4, 3, 7, -Math.PI/6, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Head
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.beginPath();
+                    ctx.arc(15, -4, 8, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Snout
+                    ctx.fillStyle = '#cbd5e1'; // Lighter gray snout
+                    ctx.beginPath();
+                    ctx.arc(20, -2, 4, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Nose & Eye
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath(); ctx.arc(23, -3, 1.5, 0, Math.PI*2); ctx.fill(); // Nose
+                    ctx.beginPath(); ctx.arc(16, -6, 1.5, 0, Math.PI*2); ctx.fill(); // Eye
+                }
 
                 ctx.restore();
             }
@@ -516,7 +618,14 @@
             canvas.height = GAME_HEIGHT;
 
             document.getElementById('start-btn').addEventListener('click', startGame);
-            document.getElementById('restart-btn').addEventListener('click', resetLevel);
+            document.getElementById('restart-btn').addEventListener('click', () => {
+                if (gameState === 'level_transition') {
+                    currentLevel++;
+                    startLevel();
+                } else {
+                    startGame(); // Full reset if dead or beat whole game
+                }
+            });
 
             // Color pickers logic
             const updateColors = () => {
@@ -555,58 +664,176 @@
             enemies = [];
             bubbles = [];
             particles = [];
-            score = 0;
             cameraX = 0;
-            updateUI();
 
-            // Floor
-            platforms.push(new Platform(-100, GAME_HEIGHT - 40, 600, 100));
-            
-            // Gap, then more floor
-            platforms.push(new Platform(600, GAME_HEIGHT - 60, 400, 150));
-            platforms.push(new Platform(1150, GAME_HEIGHT - 40, 800, 100));
-            platforms.push(new Platform(2100, GAME_HEIGHT - 80, 500, 200));
-            platforms.push(new Platform(2800, GAME_HEIGHT - 40, 1000, 100)); // Finish line area
-
-            // Floating Coral
-            platforms.push(new Platform(300, 250, 120, 20));
-            platforms.push(new Platform(500, 150, 100, 20));
-            
-            platforms.push(new Platform(800, 200, 150, 20));
-            platforms.push(new Platform(1000, 100, 100, 20));
-
-            platforms.push(new Platform(1400, 280, 100, 20));
-            platforms.push(new Platform(1600, 180, 100, 20));
-            platforms.push(new Platform(1800, 250, 150, 20));
-
-            // Collectibles (Pearls)
             const addPearlRow = (startX, y, count) => {
                 for(let i=0; i<count; i++) collectibles.push(new Collectible(startX + i*40, y));
             }
-            
-            addPearlRow(200, GAME_HEIGHT - 80, 3);
-            addPearlRow(320, 210, 3);
-            addPearlRow(510, 110, 2);
-            
-            addPearlRow(700, GAME_HEIGHT - 100, 4);
-            addPearlRow(820, 160, 3);
 
-            addPearlRow(1200, GAME_HEIGHT - 80, 5);
-            addPearlRow(1610, 140, 2);
-            addPearlRow(1820, 210, 3);
-            
-            // Win condition big pearl pile
-            addPearlRow(3100, GAME_HEIGHT - 80, 5);
-            addPearlRow(3120, GAME_HEIGHT - 120, 4);
-            addPearlRow(3140, GAME_HEIGHT - 160, 3);
+            if (currentLevel === 1) {
+                levelEndX = 3200;
+                // --- LEVEL 1: The Reef ---
+                // Floor
+                platforms.push(new Platform(-100, GAME_HEIGHT - 40, 600, 100));
+                platforms.push(new Platform(600, GAME_HEIGHT - 60, 400, 150));
+                platforms.push(new Platform(1150, GAME_HEIGHT - 40, 800, 100));
+                platforms.push(new Platform(2100, GAME_HEIGHT - 80, 500, 200));
+                platforms.push(new Platform(2800, GAME_HEIGHT - 40, 1000, 100)); // Finish line area
 
-            // Enemies (Crabs on platforms)
-            enemies.push(new Enemy(400, GAME_HEIGHT - 56, 100));
-            enemies.push(new Enemy(750, GAME_HEIGHT - 76, 150));
-            enemies.push(new Enemy(1300, GAME_HEIGHT - 56, 200));
-            enemies.push(new Enemy(1500, GAME_HEIGHT - 56, 150));
-            enemies.push(new Enemy(2200, GAME_HEIGHT - 96, 150));
-            enemies.push(new Enemy(2400, GAME_HEIGHT - 96, 150));
+                // Floating Coral
+                platforms.push(new Platform(300, 250, 120, 20));
+                platforms.push(new Platform(500, 150, 100, 20));
+                platforms.push(new Platform(800, 200, 150, 20));
+                platforms.push(new Platform(1000, 100, 100, 20));
+                platforms.push(new Platform(1400, 280, 100, 20));
+                platforms.push(new Platform(1600, 180, 100, 20));
+                platforms.push(new Platform(1800, 250, 150, 20));
+
+                // Collectibles
+                addPearlRow(200, GAME_HEIGHT - 80, 3);
+                addPearlRow(320, 210, 3);
+                addPearlRow(510, 110, 2);
+                addPearlRow(700, GAME_HEIGHT - 100, 4);
+                addPearlRow(820, 160, 3);
+                addPearlRow(1200, GAME_HEIGHT - 80, 5);
+                addPearlRow(1610, 140, 2);
+                addPearlRow(1820, 210, 3);
+                
+                // Win condition big pearl pile
+                addPearlRow(3100, GAME_HEIGHT - 80, 5);
+                addPearlRow(3120, GAME_HEIGHT - 120, 4);
+                addPearlRow(3140, GAME_HEIGHT - 160, 3);
+
+                // Enemies
+                enemies.push(new Enemy(400, GAME_HEIGHT - 56, 100)); // Crab
+                enemies.push(new Enemy(750, GAME_HEIGHT - 76, 150)); // Crab
+                
+                // Add a seal swimming mid-water
+                enemies.push(new Enemy(800, 150, 100, 'seal'));
+                enemies.push(new Enemy(900, 180, 100, 'seal'));
+                enemies.push(new Enemy(1000, 200, 100, 'seal'));
+                enemies.push(new Enemy(1100, 100, 120, 'seal'));
+                
+                enemies.push(new Enemy(1300, GAME_HEIGHT - 56, 200)); // Crab
+                enemies.push(new Enemy(1500, GAME_HEIGHT - 56, 150)); // Crab
+                
+                // Add another seal
+                enemies.push(new Enemy(1700, 250, 100, 'seal'));
+                enemies.push(new Enemy(1900, 150, 100, 'seal'));
+                enemies.push(new Enemy(2000, 200, 120, 'seal'));
+                enemies.push(new Enemy(2100, 220, 100, 'seal'));
+                
+                enemies.push(new Enemy(2200, GAME_HEIGHT - 96, 150)); // Crab
+                enemies.push(new Enemy(2400, GAME_HEIGHT - 96, 150)); // Crab
+
+            } else if (currentLevel === 2) {
+                levelEndX = 3000;
+                // --- LEVEL 2: The Deep Drops ---
+                platforms.push(new Platform(-100, GAME_HEIGHT - 40, 400, 100));
+                platforms.push(new Platform(450, GAME_HEIGHT - 40, 200, 100)); // Short gap
+                
+                // Stepping stones ascending
+                platforms.push(new Platform(800, 300, 100, 20));
+                platforms.push(new Platform(1000, 200, 100, 20));
+                platforms.push(new Platform(1200, 100, 100, 20));
+                
+                platforms.push(new Platform(1400, GAME_HEIGHT - 40, 600, 100)); // Mid safe zone
+
+                platforms.push(new Platform(2100, 250, 150, 20));
+                platforms.push(new Platform(2400, 150, 150, 20));
+
+                platforms.push(new Platform(2700, GAME_HEIGHT - 40, 600, 100)); // Finish
+
+                addPearlRow(810, 260, 2);
+                addPearlRow(1010, 160, 2);
+                addPearlRow(1210, 60, 2);
+                addPearlRow(1500, GAME_HEIGHT - 80, 5);
+                addPearlRow(2120, 210, 3);
+                addPearlRow(2420, 110, 3);
+                
+                // Win pile
+                addPearlRow(2900, GAME_HEIGHT - 80, 5);
+                addPearlRow(2920, GAME_HEIGHT - 120, 4);
+                
+                // Enemies
+                enemies.push(new Enemy(500, GAME_HEIGHT - 56, 100));
+                enemies.push(new Enemy(1500, GAME_HEIGHT - 56, 200));
+                
+                // Seals floating over gaps
+                enemies.push(new Enemy(550, 150, 80, 'seal'));
+                enemies.push(new Enemy(650, 200, 100, 'seal'));
+                enemies.push(new Enemy(750, 250, 120, 'seal'));
+                enemies.push(new Enemy(1050, 100, 100, 'seal'));
+                enemies.push(new Enemy(1600, 200, 100, 'seal'));
+                enemies.push(new Enemy(1800, 150, 120, 'seal'));
+                enemies.push(new Enemy(1900, 100, 100, 'seal'));
+                enemies.push(new Enemy(2200, 150, 100, 'seal'));
+                
+                enemies.push(new Enemy(1700, GAME_HEIGHT - 56, 200));
+                enemies.push(new Enemy(2120, 234, 50));
+                enemies.push(new Enemy(2420, 134, 50));
+
+            } else if (currentLevel === 3) {
+                levelEndX = 3500;
+                // --- LEVEL 3: Crab City ---
+                platforms.push(new Platform(-100, GAME_HEIGHT - 40, 300, 100));
+                
+                // Long high bridges with enemies
+                platforms.push(new Platform(300, 250, 800, 20));
+                platforms.push(new Platform(400, 100, 600, 20));
+                
+                platforms.push(new Platform(1200, GAME_HEIGHT - 40, 500, 100));
+                platforms.push(new Platform(1800, GAME_HEIGHT - 40, 500, 100));
+                
+                // Tricky stairs
+                platforms.push(new Platform(2400, 300, 100, 20));
+                platforms.push(new Platform(2600, 200, 100, 20));
+                platforms.push(new Platform(2800, 100, 100, 20));
+                platforms.push(new Platform(3000, 300, 100, 20));
+
+                platforms.push(new Platform(3200, GAME_HEIGHT - 40, 600, 100)); // Finish
+
+                addPearlRow(350, 210, 8);
+                addPearlRow(450, 60, 6);
+                addPearlRow(1300, GAME_HEIGHT - 80, 4);
+                addPearlRow(1900, GAME_HEIGHT - 80, 4);
+                addPearlRow(2410, 260, 2);
+                addPearlRow(2610, 160, 2);
+                addPearlRow(2810, 60, 2);
+                addPearlRow(3010, 260, 2);
+
+                // Win pile
+                addPearlRow(3400, GAME_HEIGHT - 80, 5);
+                addPearlRow(3420, GAME_HEIGHT - 120, 5);
+                addPearlRow(3440, GAME_HEIGHT - 160, 5);
+
+                // Enemies
+                enemies.push(new Enemy(350, 234, 300));
+                enemies.push(new Enemy(600, 234, 200));
+                enemies.push(new Enemy(450, 84, 200));
+                enemies.push(new Enemy(700, 84, 150));
+                enemies.push(new Enemy(1300, GAME_HEIGHT - 56, 150));
+                
+                // Seals patrolling higher up and between platforms
+                enemies.push(new Enemy(500, 150, 150, 'seal'));
+                enemies.push(new Enemy(800, 250, 150, 'seal'));
+                enemies.push(new Enemy(1000, 200, 150, 'seal'));
+                enemies.push(new Enemy(1100, 150, 120, 'seal'));
+                enemies.push(new Enemy(1500, 150, 150, 'seal'));
+                enemies.push(new Enemy(1600, 200, 100, 'seal'));
+                enemies.push(new Enemy(1700, 100, 150, 'seal'));
+                enemies.push(new Enemy(2100, 250, 100, 'seal'));
+                enemies.push(new Enemy(2200, 150, 120, 'seal'));
+                enemies.push(new Enemy(2300, 100, 150, 'seal'));
+                enemies.push(new Enemy(2500, 150, 100, 'seal'));
+                enemies.push(new Enemy(2700, 200, 150, 'seal'));
+                
+                enemies.push(new Enemy(1400, GAME_HEIGHT - 56, 150));
+                enemies.push(new Enemy(1900, GAME_HEIGHT - 56, 150));
+                enemies.push(new Enemy(2000, GAME_HEIGHT - 56, 150));
+            }
+            
+            updateUI();
         }
 
         function startGame() {
@@ -619,8 +846,10 @@
                 document.getElementById('controls-layer').classList.remove('hidden');
             }
 
-            resetLevel();
-            gameState = 'playing';
+            score = 0;
+            lives = 3;
+            currentLevel = 1;
+            startLevel();
             
             if (!animationId) {
                 gameLoop();
@@ -637,11 +866,10 @@
             }
         }
 
-        function resetLevel() {
+        function startLevel() {
             player = new Player();
             player.x = 100;
             player.y = 200;
-            lives = 3;
             buildLevel();
             document.getElementById('game-over-screen').classList.add('hidden');
             gameState = 'playing';
@@ -667,16 +895,36 @@
         }
 
         function gameOver(win) {
-            gameState = win ? 'win' : 'gameover';
-            document.getElementById('game-over-screen').classList.remove('hidden');
-            document.getElementById('game-over-title').innerText = win ? "Level Complete!" : "Game Over!";
-            document.getElementById('game-over-title').className = win ? "text-5xl font-bold text-teal-400 mb-4 drop-shadow-lg" : "text-5xl font-bold text-red-400 mb-4 drop-shadow-lg";
-            document.getElementById('final-score').innerText = score;
+            if (win) {
+                if (currentLevel < MAX_LEVELS) {
+                    gameState = 'level_transition';
+                    document.getElementById('game-over-screen').classList.remove('hidden');
+                    document.getElementById('game-over-title').innerText = "Level " + currentLevel + " Complete!";
+                    document.getElementById('game-over-title').className = "text-5xl font-bold text-teal-400 mb-4 drop-shadow-lg";
+                    document.getElementById('final-score').innerText = score;
+                    document.getElementById('restart-btn').innerText = "Next Level";
+                } else {
+                    gameState = 'win';
+                    document.getElementById('game-over-screen').classList.remove('hidden');
+                    document.getElementById('game-over-title').innerText = "You Win!";
+                    document.getElementById('game-over-title').className = "text-5xl font-bold text-yellow-400 mb-4 drop-shadow-lg";
+                    document.getElementById('final-score').innerText = score;
+                    document.getElementById('restart-btn').innerText = "Play Again";
+                }
+            } else {
+                gameState = 'gameover';
+                document.getElementById('game-over-screen').classList.remove('hidden');
+                document.getElementById('game-over-title').innerText = "Game Over!";
+                document.getElementById('game-over-title').className = "text-5xl font-bold text-red-400 mb-4 drop-shadow-lg";
+                document.getElementById('final-score').innerText = score;
+                document.getElementById('restart-btn').innerText = "Try Again";
+            }
         }
 
         function updateUI() {
             document.getElementById('score-display').innerText = score;
             document.getElementById('lives-display').innerText = '❤️'.repeat(lives);
+            document.getElementById('level-display').innerText = currentLevel;
         }
 
         function spawnParticle(x, y, color) {
@@ -772,15 +1020,17 @@
                         player.vy = player.jumpPower * 0.8; // Bounce
                         score += 50;
                         updateUI();
-                        for(let i=0; i<8; i++) spawnParticle(e.x + e.width/2, e.y + e.height/2, '#ef4444');
+                        // Color the defeat particles based on the enemy type!
+                        let pColor = e.type === 'seal' ? '#94a3b8' : '#ef4444';
+                        for(let i=0; i<8; i++) spawnParticle(e.x + e.width/2, e.y + e.height/2, pColor);
                     } else {
                         takeDamage();
                     }
                 }
             }
 
-            // Win Condition
-            if (player.x > 3200) {
+            // Win Condition Check
+            if (player.x > levelEndX) {
                 gameOver(true);
             }
         }
