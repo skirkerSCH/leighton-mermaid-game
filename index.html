@@ -85,8 +85,13 @@
             </h1>
             
             <div class="bg-white/10 p-6 rounded-2xl w-80 max-w-full backdrop-blur-md border border-white/20 shadow-xl">
-                <h2 class="text-xl font-bold mb-4 text-center">Customize Your Mermaid</h2>
+                <h2 class="text-xl font-bold mb-4 text-center">Customize Character</h2>
                 
+                <div class="flex justify-center gap-2 mb-4">
+                    <button id="btn-mermaid" class="flex-1 py-2 bg-blue-500 rounded-lg border-2 border-white/50 font-bold transition">Mermaid</button>
+                    <button id="btn-merman" class="flex-1 py-2 bg-black/20 rounded-lg border-2 border-transparent font-bold transition text-gray-300">Merman</button>
+                </div>
+
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
                         <label class="font-semibold text-teal-200">Tail Color:</label>
@@ -96,7 +101,7 @@
                         <label class="font-semibold text-yellow-200">Hair Color:</label>
                         <input type="color" id="hair-color" value="#f59e0b">
                     </div>
-                    <div class="flex items-center justify-between">
+                    <div id="top-color-container" class="flex items-center justify-between">
                         <label class="font-semibold text-pink-200">Top Color:</label>
                         <input type="color" id="top-color" value="#ec4899">
                     </div>
@@ -175,6 +180,7 @@
         let levelEndX = 3200;
 
         // Customization
+        let characterType = 'mermaid'; // 'mermaid' or 'merman'
         let colors = {
             tail: '#10b981',
             hair: '#f59e0b',
@@ -187,6 +193,7 @@
 
         // Entities
         let player;
+        let turtle; // Added turtle companion
         let platforms = [];
         let collectibles = [];
         let enemies = [];
@@ -209,6 +216,7 @@
                 this.facingRight = true;
                 this.swimFrame = 0;
                 this.invulnerableTimer = 0;
+                this.type = characterType;
             }
 
             update() {
@@ -309,21 +317,29 @@
                 ctx.translate(this.x + this.width/2, this.y + this.height/2);
                 if (!this.facingRight) ctx.scale(-1, 1);
 
-                // Draw Mermaid (Centered on origin)
+                // Draw Character (Centered on origin)
                 
                 // Hair (Back)
-                ctx.fillStyle = colors.hair;
-                ctx.beginPath();
-                ctx.arc(-8, -10, 12, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Flowing hair animation
-                let hairWobble = Math.sin(this.swimFrame) * 3;
-                ctx.beginPath();
-                ctx.moveTo(-10, -15);
-                ctx.quadraticCurveTo(-25, -5 + hairWobble, -20, 15 + hairWobble);
-                ctx.lineTo(-5, -5);
-                ctx.fill();
+                if (this.type === 'mermaid') {
+                    ctx.fillStyle = colors.hair;
+                    ctx.beginPath();
+                    ctx.arc(-8, -10, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Flowing hair animation
+                    let hairWobble = Math.sin(this.swimFrame) * 3;
+                    ctx.beginPath();
+                    ctx.moveTo(-10, -15);
+                    ctx.quadraticCurveTo(-25, -5 + hairWobble, -20, 15 + hairWobble);
+                    ctx.lineTo(-5, -5);
+                    ctx.fill();
+                } else {
+                    // Merman short back hair
+                    ctx.fillStyle = colors.hair;
+                    ctx.beginPath();
+                    ctx.arc(-5, -12, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
                 // Tail (Animated)
                 ctx.fillStyle = colors.tail;
@@ -350,10 +366,12 @@
                 ctx.fillStyle = colors.skin;
                 ctx.fillRect(-6, -5, 12, 12);
                 
-                // Top (Bikini/Shells)
-                ctx.fillStyle = colors.top;
-                ctx.beginPath(); ctx.arc(-3, -2, 4, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(3, -2, 4, 0, Math.PI*2); ctx.fill();
+                // Top (Bikini/Shells) - Only for mermaid
+                if (this.type === 'mermaid') {
+                    ctx.fillStyle = colors.top;
+                    ctx.beginPath(); ctx.arc(-3, -2, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(3, -2, 4, 0, Math.PI*2); ctx.fill();
+                }
 
                 // Head
                 ctx.fillStyle = colors.skin;
@@ -392,16 +410,34 @@
                 ctx.restore();
 
                 // Hair (Front bang fixed - moved up and away from face)
-                ctx.fillStyle = colors.hair;
-                ctx.beginPath();
-                ctx.arc(-4, -23, 6, 0, Math.PI * 2); // Top volume
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(3, -24, 4, 0, Math.PI * 2); // Sweeping top
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(6, -20, 3, 0, Math.PI * 2); // Side sweep
-                ctx.fill();
+                if (this.type === 'mermaid') {
+                    ctx.fillStyle = colors.hair;
+                    ctx.beginPath();
+                    ctx.arc(-4, -23, 6, 0, Math.PI * 2); // Top volume
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(3, -24, 4, 0, Math.PI * 2); // Sweeping top
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(6, -20, 3, 0, Math.PI * 2); // Side sweep
+                    ctx.fill();
+                } else {
+                    // Merman short/spiky hair
+                    ctx.fillStyle = colors.hair;
+                    ctx.beginPath();
+                    ctx.arc(-2, -22, 7, 0, Math.PI * 2); 
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(4, -20, 5, 0, Math.PI * 2); 
+                    ctx.fill();
+                    // Hair spikes
+                    ctx.beginPath();
+                    ctx.moveTo(-7, -24); ctx.lineTo(-3, -30); ctx.lineTo(1, -26);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(-1, -27); ctx.lineTo(4, -31); ctx.lineTo(7, -23);
+                    ctx.fill();
+                }
 
                 ctx.restore();
             }
@@ -498,11 +534,11 @@
                 if (this.type === 'crab') {
                     this.width = 24;
                     this.height = 16;
-                    this.speed = 1;
+                    this.speed = 1.5; // INCREASED: Crabs are 50% faster
                 } else if (this.type === 'seal') {
                     this.width = 40;
                     this.height = 20;
-                    this.speed = 1.5; // Seals swim a bit faster
+                    this.speed = 2.5; // INCREASED: Seals swim much faster now
                 }
             }
             update() {
@@ -514,8 +550,8 @@
                 }
                 
                 if (this.type === 'seal') {
-                    // Seals bob up and down gracefully while swimming
-                    this.y = this.startY + Math.sin(this.animTimer * 0.08) * 15;
+                    // INCREASED: Seals bob up and down faster and in a wider arc
+                    this.y = this.startY + Math.sin(this.animTimer * 0.12) * 25;
                 }
                 
                 this.animTimer++;
@@ -607,6 +643,133 @@
             }
         }
 
+        class Turtle {
+            constructor(player) {
+                this.player = player;
+                this.width = 24;
+                this.height = 14;
+                this.x = player.x - 40;
+                this.y = player.y - 20;
+                this.isDead = false; // The turtle is now immortal!
+                this.target = null;
+                this.facingRight = true;
+                this.animTimer = 0;
+            }
+
+            update() {
+                if (this.isDead) return;
+                this.animTimer++;
+
+                // Drop target if it was killed by player or already dead
+                if (this.target && this.target.isDead) {
+                    this.target = null;
+                }
+
+                // Scan for crabs getting too close to the player
+                if (!this.target) {
+                    let closestCrab = null;
+                    let closestDist = 80; // DECREASED: Threat detection radius (was 250). You must get close!
+                    for (let e of enemies) {
+                        if (e.type === 'crab' && !e.isDead) {
+                            let dx = (e.x + e.width/2) - (this.player.x + this.player.width/2);
+                            let dy = (e.y + e.height/2) - (this.player.y + this.player.height/2);
+                            let dist = Math.sqrt(dx*dx + dy*dy);
+                            if (dist < closestDist) {
+                                closestDist = dist;
+                                closestCrab = e;
+                            }
+                        }
+                    }
+                    this.target = closestCrab;
+                }
+
+                // Move towards target or follow player
+                if (this.target) {
+                    // Attack Dash!
+                    let dx = (this.target.x + this.target.width/2) - (this.x + this.width/2);
+                    let dy = (this.target.y + this.target.height/2) - (this.y + this.height/2);
+                    let angle = Math.atan2(dy, dx);
+                    
+                    this.x += Math.cos(angle) * 3.5; 
+                    this.y += Math.sin(angle) * 3.5;
+                    this.facingRight = Math.cos(angle) > 0;
+
+                    // Collision with crab
+                    let distToCrab = Math.sqrt(dx*dx + dy*dy);
+                    if (distToCrab < 20) {
+                        this.target.isDead = true;
+                        score += 50;
+                        updateUI();
+                        
+                        // Crab death particles
+                        for(let i=0; i<8; i++) spawnParticle(this.target.x + this.target.width/2, this.target.y + this.target.height/2, '#ef4444');
+                        
+                        this.target = null;
+                        
+                        // Turtle victory/clash particles (no longer takes damage)
+                        for(let i=0; i<5; i++) spawnParticle(this.x + this.width/2, this.y + this.height/2, '#4ade80');
+                    }
+                } else {
+                    // Follow player casually
+                    let followOffsetX = this.player.facingRight ? -40 : 40;
+                    let targetX = this.player.x + followOffsetX;
+                    let targetY = this.player.y - 10 + Math.sin(this.animTimer * 0.1) * 5; // Bobbing motion
+                    
+                    this.x += (targetX - this.x) * 0.05;
+                    this.y += (targetY - this.y) * 0.05;
+                    
+                    // Face movement direction
+                    if (Math.abs(targetX - this.x) > 2) {
+                        this.facingRight = targetX > this.x;
+                    }
+                }
+            }
+
+            draw(ctx) {
+                if (this.isDead) return;
+                
+                ctx.save();
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                if (!this.facingRight) ctx.scale(-1, 1);
+
+                // Back flipper
+                ctx.fillStyle = '#22c55e'; // Light green
+                let flipAngle = Math.sin(this.animTimer * 0.3) * 0.5;
+                ctx.save();
+                ctx.translate(-8, 5);
+                ctx.rotate(-flipAngle);
+                ctx.beginPath(); ctx.ellipse(0, 0, 6, 3, 0, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+
+                // Shell
+                ctx.fillStyle = '#14532d'; // Dark green shell
+                ctx.beginPath();
+                ctx.arc(0, -2, 10, Math.PI, 0); // Top half dome
+                ctx.lineTo(10, 2);
+                ctx.lineTo(-10, 2);
+                ctx.fill();
+
+                // Head
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.arc(12, 0, 5, 0, Math.PI*2);
+                ctx.fill();
+                
+                // Eye
+                ctx.fillStyle = 'black';
+                ctx.beginPath(); ctx.arc(13, -1, 1.5, 0, Math.PI*2); ctx.fill();
+
+                // Front flipper
+                ctx.save();
+                ctx.translate(4, 5);
+                ctx.rotate(flipAngle);
+                ctx.beginPath(); ctx.ellipse(0, 0, 7, 3, 0, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+
+                ctx.restore();
+            }
+        }
+
         // --- GAME LOGIC ---
 
         function initGame() {
@@ -625,6 +788,29 @@
                 } else {
                     startGame(); // Full reset if dead or beat whole game
                 }
+            });
+
+            // Type toggle logic
+            const btnMermaid = document.getElementById('btn-mermaid');
+            const btnMerman = document.getElementById('btn-merman');
+            const topColorContainer = document.getElementById('top-color-container');
+
+            btnMermaid.addEventListener('click', () => {
+                characterType = 'mermaid';
+                btnMermaid.className = "flex-1 py-2 bg-blue-500 rounded-lg border-2 border-white/50 font-bold transition";
+                btnMerman.className = "flex-1 py-2 bg-black/20 rounded-lg border-2 border-transparent font-bold transition text-gray-300";
+                topColorContainer.style.display = 'flex';
+                player.type = characterType;
+                drawPreview();
+            });
+
+            btnMerman.addEventListener('click', () => {
+                characterType = 'merman';
+                btnMerman.className = "flex-1 py-2 bg-blue-500 rounded-lg border-2 border-white/50 font-bold transition";
+                btnMermaid.className = "flex-1 py-2 bg-black/20 rounded-lg border-2 border-transparent font-bold transition text-gray-300";
+                topColorContainer.style.display = 'none'; // Hide the top color picker for Merman
+                player.type = characterType;
+                drawPreview();
             });
 
             // Color pickers logic
@@ -710,18 +896,26 @@
                 
                 // Add a seal swimming mid-water
                 enemies.push(new Enemy(800, 150, 100, 'seal'));
+                enemies.push(new Enemy(850, 220, 110, 'seal'));
                 enemies.push(new Enemy(900, 180, 100, 'seal'));
+                enemies.push(new Enemy(950, 130, 90, 'seal'));
                 enemies.push(new Enemy(1000, 200, 100, 'seal'));
+                enemies.push(new Enemy(1050, 240, 120, 'seal'));
                 enemies.push(new Enemy(1100, 100, 120, 'seal'));
+                enemies.push(new Enemy(1150, 170, 100, 'seal'));
                 
                 enemies.push(new Enemy(1300, GAME_HEIGHT - 56, 200)); // Crab
                 enemies.push(new Enemy(1500, GAME_HEIGHT - 56, 150)); // Crab
                 
                 // Add another seal
                 enemies.push(new Enemy(1700, 250, 100, 'seal'));
+                enemies.push(new Enemy(1750, 190, 110, 'seal'));
                 enemies.push(new Enemy(1900, 150, 100, 'seal'));
+                enemies.push(new Enemy(1850, 210, 120, 'seal'));
                 enemies.push(new Enemy(2000, 200, 120, 'seal'));
+                enemies.push(new Enemy(1950, 140, 90, 'seal'));
                 enemies.push(new Enemy(2100, 220, 100, 'seal'));
+                enemies.push(new Enemy(2050, 180, 130, 'seal'));
                 
                 enemies.push(new Enemy(2200, GAME_HEIGHT - 96, 150)); // Crab
                 enemies.push(new Enemy(2400, GAME_HEIGHT - 96, 150)); // Crab
@@ -761,13 +955,21 @@
                 
                 // Seals floating over gaps
                 enemies.push(new Enemy(550, 150, 80, 'seal'));
+                enemies.push(new Enemy(600, 220, 100, 'seal'));
                 enemies.push(new Enemy(650, 200, 100, 'seal'));
+                enemies.push(new Enemy(700, 140, 110, 'seal'));
                 enemies.push(new Enemy(750, 250, 120, 'seal'));
+                enemies.push(new Enemy(800, 180, 90, 'seal'));
                 enemies.push(new Enemy(1050, 100, 100, 'seal'));
+                enemies.push(new Enemy(1150, 150, 120, 'seal'));
                 enemies.push(new Enemy(1600, 200, 100, 'seal'));
+                enemies.push(new Enemy(1650, 120, 110, 'seal'));
                 enemies.push(new Enemy(1800, 150, 120, 'seal'));
+                enemies.push(new Enemy(1750, 240, 100, 'seal'));
                 enemies.push(new Enemy(1900, 100, 100, 'seal'));
+                enemies.push(new Enemy(1850, 190, 130, 'seal'));
                 enemies.push(new Enemy(2200, 150, 100, 'seal'));
+                enemies.push(new Enemy(2300, 200, 110, 'seal'));
                 
                 enemies.push(new Enemy(1700, GAME_HEIGHT - 56, 200));
                 enemies.push(new Enemy(2120, 234, 50));
@@ -816,17 +1018,29 @@
                 
                 // Seals patrolling higher up and between platforms
                 enemies.push(new Enemy(500, 150, 150, 'seal'));
+                enemies.push(new Enemy(550, 220, 120, 'seal'));
                 enemies.push(new Enemy(800, 250, 150, 'seal'));
+                enemies.push(new Enemy(850, 180, 140, 'seal'));
                 enemies.push(new Enemy(1000, 200, 150, 'seal'));
+                enemies.push(new Enemy(950, 140, 110, 'seal'));
                 enemies.push(new Enemy(1100, 150, 120, 'seal'));
+                enemies.push(new Enemy(1050, 260, 130, 'seal'));
                 enemies.push(new Enemy(1500, 150, 150, 'seal'));
+                enemies.push(new Enemy(1550, 210, 120, 'seal'));
                 enemies.push(new Enemy(1600, 200, 100, 'seal'));
+                enemies.push(new Enemy(1650, 140, 110, 'seal'));
                 enemies.push(new Enemy(1700, 100, 150, 'seal'));
+                enemies.push(new Enemy(1750, 180, 140, 'seal'));
                 enemies.push(new Enemy(2100, 250, 100, 'seal'));
+                enemies.push(new Enemy(2150, 150, 110, 'seal'));
                 enemies.push(new Enemy(2200, 150, 120, 'seal'));
+                enemies.push(new Enemy(2250, 220, 130, 'seal'));
                 enemies.push(new Enemy(2300, 100, 150, 'seal'));
+                enemies.push(new Enemy(2400, 160, 120, 'seal'));
                 enemies.push(new Enemy(2500, 150, 100, 'seal'));
+                enemies.push(new Enemy(2600, 240, 140, 'seal'));
                 enemies.push(new Enemy(2700, 200, 150, 'seal'));
+                enemies.push(new Enemy(2750, 120, 110, 'seal'));
                 
                 enemies.push(new Enemy(1400, GAME_HEIGHT - 56, 150));
                 enemies.push(new Enemy(1900, GAME_HEIGHT - 56, 150));
@@ -870,6 +1084,7 @@
             player = new Player();
             player.x = 100;
             player.y = 200;
+            turtle = new Turtle(player); // Spawn companion!
             buildLevel();
             document.getElementById('game-over-screen').classList.add('hidden');
             gameState = 'playing';
@@ -950,6 +1165,7 @@
             if (gameState !== 'playing') return;
 
             player.update();
+            if (turtle && !turtle.isDead) turtle.update();
 
             // Camera follow player smoothly
             let targetCameraX = player.x - GAME_WIDTH / 3;
@@ -1077,6 +1293,11 @@
                 if (!e.isDead && e.x > cameraX - 50 && e.x < cameraX + GAME_WIDTH + 50) {
                     e.draw(ctx);
                 }
+            }
+
+            // Draw Turtle Companion
+            if (turtle && !turtle.isDead) {
+                turtle.draw(ctx);
             }
 
             // Draw Player
